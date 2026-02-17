@@ -1,0 +1,30 @@
+[project]
+name = "us-treasury-risk-management"
+version = "0.1.0"
+description = "Risk-managed minimum variance portfolios for U.S. Treasury securities using Rolling Covariance, EWMA, and VAR-based models."
+authors = [{ name = "Younghoon Chang" }]
+requires-python = ">=3.10"
+dependencies = [
+    "fredapi>=0.5.0",
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "statsmodels>=0.14.0",
+    "scikit-learn>=1.3.0",
+    "scipy>=1.11.0",
+    "streamlit>=1.28.0",
+    "plotly>=5.18.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0.0",
+    "loguru>=0.7.0",
+    "pyarrow>=14.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"

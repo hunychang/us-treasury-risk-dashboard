@@ -1,0 +1,33 @@
+# Secrets (NEVER commit API keys)
+.env
+.streamlit/secrets.toml
+
+# Data caches
+cache/
+output/
+
+# Logs
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

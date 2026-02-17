@@ -1,0 +1,81 @@
+project:
+  name: us-treasury-risk-management
+  version: 0.1.0
+  description: >
+    Risk-managed minimum variance portfolios for U.S. Treasury securities
+    using Rolling Covariance, EWMA, and VAR-based models.
+  author: Younghoon Chang
+  timezone: America/New_York
+
+data:
+  source: FRED
+  instruments:
+    - DGS1   # 1Y Treasury
+    - DGS2   # 2Y Treasury
+    - DGS5   # 5Y Treasury
+    - DGS10  # 10Y Treasury
+  frequency: daily
+  start_date: 1995-01-01
+  end_date: null
+  return_type: log
+  interpolation: linear
+  missing_handling: drop
+
+portfolio:
+  objective: minimum_variance
+  constraints:
+    long_only: true
+    weight_sum: 1
+    leverage: false
+  rebalance_frequency: monthly
+  transaction_cost_bps: 0
+
+models:
+  rolling_cov:
+    enabled: true
+    window: 252
+    shrinkage: none
+    annualization_factor: 252
+  ewma:
+    enabled: true
+    lambda: 0.94
+    annualization_factor: 252
+  var:
+    enabled: true
+    lags: 1
+    forecast_horizon: 1
+    covariance_from_residuals: true
+
+risk_metrics:
+  volatility: true
+  sharpe_ratio: true
+  max_drawdown: true
+  turnover: true
+  var_95: true
+
+evaluation:
+  out_of_sample: true
+  oos_start: 2005-01-01
+  benchmark:
+    - equal_weight
+    - 60_40_proxy
+  performance_window: rolling_36m
+
+web:
+  framework: streamlit
+  host: localhost
+  port: 8501
+  interactive_weights: true
+  interactive_model_toggle: true
+  export_csv: true
+  export_png: true
+
+logging:
+  level: INFO
+  save_weights: true
+  save_cov_matrices: false
+  save_forecasts: true
+
+reproducibility:
+  random_seed: 42
+  save_config_snapshot: true
