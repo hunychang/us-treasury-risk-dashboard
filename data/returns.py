@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Dict, Optional
+
 import numpy as np
 import pandas as pd
 
@@ -10,7 +12,7 @@ import pandas as pd
 # Treasury yields: approximate modified duration for zero-coupon equivalent.
 # Spreads: scale factor to convert percentage-point changes to decimals.
 # Indices: return computation method on the level itself.
-_DEFAULT_METADATA: dict[str, dict] = {
+_DEFAULT_METADATA: Dict[str, dict] = {
     "DGS1":         {"type": "treasury_yield", "duration": 1.0},
     "DGS2":         {"type": "treasury_yield", "duration": 1.9},
     "DGS5":         {"type": "treasury_yield", "duration": 4.5},
@@ -29,7 +31,7 @@ def compute_returns(
     method: str = "duration_adj",
     interpolation: str = "linear",
     missing_handling: str = "drop",
-    instrument_metadata: dict | None = None,
+    instrument_metadata: Optional[dict] = None,
 ) -> pd.DataFrame:
     """Compute returns from yield / price levels.
 
@@ -87,7 +89,7 @@ def compute_returns(
 
 def _duration_adjusted_returns(
     df: pd.DataFrame,
-    instrument_metadata: dict | None = None,
+    instrument_metadata: Optional[dict] = None,
 ) -> pd.DataFrame:
     """Compute economically meaningful returns by instrument type.
 
@@ -104,7 +106,7 @@ def _duration_adjusted_returns(
     if instrument_metadata is None:
         instrument_metadata = {}
 
-    parts: dict[str, pd.Series] = {}
+    parts: Dict[str, pd.Series] = {}
     for col in df.columns:
         meta = instrument_metadata.get(col, _DEFAULT_METADATA.get(col, {}))
         inst_type = meta.get("type", "spread")  # safe fallback

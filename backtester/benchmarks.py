@@ -6,7 +6,7 @@ be compared with optimized portfolios using the same metrics and charts.
 
 from __future__ import annotations
 
-from typing import List
+from typing import Dict, List, Optional
 
 import numpy as np
 import pandas as pd
@@ -64,7 +64,7 @@ _TREASURY_DURATIONS = {
 def duration_weighted_benchmark(
     returns: pd.DataFrame,
     oos_start: pd.Timestamp,
-    treasury_durations: dict[str, float] | None = None,
+    treasury_durations: Optional[Dict[str, float]] = None,
 ) -> BacktestResult:
     """DV01-parity benchmark: weights inversely proportional to duration.
 

@@ -50,9 +50,9 @@ from dashboard.components.assumptions import render_assumptions
 # Cached data loading
 # ------------------------------------------------------------------
 
-@st.cache_data(ttl=3600, show_spinner="Loading Treasury yield data...")
-def _load_data():
-    """Load config, fetch yields, compute returns (cached 1 h)."""
+@st.cache_data(ttl=3600, show_spinner="Loading data from FRED...")
+def _load_returns():
+    """Fetch yields from FRED and compute duration-adjusted returns (cached 1 h)."""
     cfg = load_config()
     provider = CachedProvider(FREDProvider())
     yields = provider.get(
@@ -65,7 +65,7 @@ def _load_data():
         missing_handling=cfg.data.missing_handling,
         instrument_metadata=cfg.data.instrument_metadata,
     )
-    return cfg, returns
+    return returns
 
 
 # ------------------------------------------------------------------
@@ -103,7 +103,8 @@ def main() -> None:
     )
 
     # --- Load data --------------------------------------------------------
-    cfg, returns = _load_data()
+    cfg = load_config()
+    returns = _load_returns()
 
     # --- Sidebar controls -------------------------------------------------
     sidebar_cfg = render_sidebar(cfg)
