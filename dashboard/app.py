@@ -27,7 +27,11 @@ from models import build_models
 from models.base_model import RiskModel
 from optimizer.min_variance import MinVarianceOptimizer
 from backtester.engine import BacktestEngine
-from backtester.benchmarks import equal_weight_benchmark, sixty_forty_benchmark
+from backtester.benchmarks import (
+    equal_weight_benchmark,
+    sixty_forty_benchmark,
+    treasuries_only_benchmark,
+)
 from metrics.performance import metrics_comparison_table
 from dashboard.components.sidebar import render_sidebar
 from dashboard.components.charts import (
@@ -131,6 +135,8 @@ def main() -> None:
         results["equal_weight"] = equal_weight_benchmark(returns, oos_start)
     if sidebar_cfg["show_sixty_forty"]:
         results["60_40_proxy"] = sixty_forty_benchmark(returns, oos_start)
+    if sidebar_cfg["show_treasuries_only"]:
+        results["treasuries_only"] = treasuries_only_benchmark(returns, oos_start)
 
     # --- Data freshness indicator -----------------------------------------
     st.sidebar.divider()

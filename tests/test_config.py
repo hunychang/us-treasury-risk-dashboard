@@ -10,7 +10,10 @@ from config.config_loader import load_config, ProjectConfig
 def test_load_default_config():
     cfg = load_config()
     assert isinstance(cfg, ProjectConfig)
-    assert cfg.data.instruments == ["DGS1", "DGS2", "DGS5", "DGS10"]
+    assert cfg.data.instruments == [
+        "DGS1", "DGS2", "DGS5", "DGS10",
+        "T10Y2Y", "BAMLC0A0CM", "BAMLH0A0HYM2", "BAA10Y", "T5YIE", "VIXCLS",
+    ]
     assert cfg.portfolio.long_only is True
     assert cfg.models.ewma.lambda_ == 0.94
     assert cfg.models.rolling_cov.window == 252
@@ -18,7 +21,7 @@ def test_load_default_config():
 
 def test_config_dates():
     cfg = load_config()
-    assert cfg.data.start_date == date(1995, 1, 1)
+    assert cfg.data.start_date == date(1997, 1, 1)
     assert cfg.evaluation.oos_start == date(2005, 1, 1)
 
 

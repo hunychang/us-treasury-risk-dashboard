@@ -13,7 +13,7 @@ from metrics.performance import (
     rolling_volatility,
 )
 
-_BENCHMARK_NAMES = {"equal_weight", "60_40_proxy"}
+_BENCHMARK_NAMES = {"equal_weight", "60_40_proxy", "treasuries_only"}
 
 
 def plot_cumulative_returns(results: Dict[str, BacktestResult]) -> go.Figure:

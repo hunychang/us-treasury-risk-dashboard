@@ -48,6 +48,7 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
     st.sidebar.header("Benchmarks")
     show_equal_weight = st.sidebar.checkbox("Equal Weight (1/N)", value=True)
     show_sixty_forty = st.sidebar.checkbox("60/40 Proxy", value=True)
+    show_treasuries_only = st.sidebar.checkbox("Treasuries Only (1/4)", value=True)
 
     return {
         "rolling_cov_on": rolling_cov_on,
@@ -57,4 +58,5 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         "oos_start": oos_start,
         "show_equal_weight": show_equal_weight,
         "show_sixty_forty": show_sixty_forty,
+        "show_treasuries_only": show_treasuries_only,
     }

@@ -23,7 +23,11 @@ from data.returns import compute_returns
 from models import build_models
 from optimizer.min_variance import MinVarianceOptimizer
 from backtester.engine import BacktestEngine
-from backtester.benchmarks import equal_weight_benchmark, sixty_forty_benchmark
+from backtester.benchmarks import (
+    equal_weight_benchmark,
+    sixty_forty_benchmark,
+    treasuries_only_benchmark,
+)
 from metrics.performance import metrics_comparison_table
 from utils.logging_setup import setup_logging
 
@@ -75,6 +79,8 @@ def main() -> None:
         results["equal_weight"] = equal_weight_benchmark(returns, oos_start)
     if "60_40_proxy" in cfg.evaluation.benchmark:
         results["60_40_proxy"] = sixty_forty_benchmark(returns, oos_start)
+    if "treasuries_only" in cfg.evaluation.benchmark:
+        results["treasuries_only"] = treasuries_only_benchmark(returns, oos_start)
 
     # ---- Metrics ------------------------------------------------------------
     table = metrics_comparison_table(results)

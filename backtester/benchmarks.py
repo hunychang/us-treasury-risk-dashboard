@@ -102,3 +102,62 @@ def sixty_forty_benchmark(
         turnover=turnover,
         rebalance_dates=list(oos.index),
     )
+
+
+_TREASURY_COLS = ["DGS1", "DGS2", "DGS5", "DGS10"]
+
+
+def treasuries_only_benchmark(
+    returns: pd.DataFrame,
+    oos_start: pd.Timestamp,
+    treasury_assets: List[str] | None = None,
+) -> BacktestResult:
+    """Equal-weight benchmark using only the 4 Treasury yield instruments.
+
+    Useful for answering *"does adding spreads to the portfolio help?"*
+
+    Parameters
+    ----------
+    returns : Full return history (must contain the Treasury columns).
+    oos_start : Start of the out-of-sample window.
+    treasury_assets : Column names of Treasury instruments.  Defaults to
+        ``["DGS1", "DGS2", "DGS5", "DGS10"]``.
+
+    Returns
+    -------
+    BacktestResult for the Treasuries-only strategy.
+    """
+    if treasury_assets is None:
+        treasury_assets = _TREASURY_COLS
+
+    oos = returns.loc[returns.index >= oos_start]
+    n = len(returns.columns)
+    cols = list(returns.columns)
+
+    # Build weight vector: equal weight across Treasury cols, zero elsewhere
+    present = [c for c in treasury_assets if c in cols]
+    if not present:
+        # Fallback: equal weight everything
+        w = np.ones(n) / n
+    else:
+        w = np.zeros(n)
+        for c in present:
+            w[cols.index(c)] = 1.0 / len(present)
+
+    port_rets = oos.dot(w)
+    port_rets.name = "treasuries_only"
+
+    weights_df = pd.DataFrame(
+        np.tile(w, (len(oos), 1)),
+        index=oos.index,
+        columns=returns.columns,
+    )
+    turnover = pd.Series(0.0, index=oos.index, name="turnover")
+
+    return BacktestResult(
+        model_name="treasuries_only",
+        portfolio_returns=port_rets,
+        weights_history=weights_df,
+        turnover=turnover,
+        rebalance_dates=list(oos.index),
+    )
