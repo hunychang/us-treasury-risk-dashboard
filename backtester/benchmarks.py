@@ -52,41 +52,60 @@ def equal_weight_benchmark(
     )
 
 
-def sixty_forty_benchmark(
+# Default approximate modified durations for DV01-parity calculation
+_TREASURY_DURATIONS = {
+    "DGS1": 1.0,
+    "DGS2": 1.9,
+    "DGS5": 4.5,
+    "DGS10": 8.5,
+}
+
+
+def duration_weighted_benchmark(
     returns: pd.DataFrame,
     oos_start: pd.Timestamp,
-    long_asset: str = "DGS10",
-    short_asset: str = "DGS2",
+    treasury_durations: dict[str, float] | None = None,
 ) -> BacktestResult:
-    """60/40 duration proxy: 60 % long-tenor, 40 % short-tenor.
+    """DV01-parity benchmark: weights inversely proportional to duration.
+
+    Each Treasury instrument contributes equal interest-rate risk (DV01).
+    Weight formula: ``w_i = (1/D_i) / sum(1/D_j)`` for Treasury instruments.
+    Non-Treasury instruments receive zero weight.
 
     Parameters
     ----------
     returns : Full return history.
     oos_start : Start of the out-of-sample window.
-    long_asset : Column name for the long-duration instrument (default DGS10).
-    short_asset : Column name for the short-duration instrument (default DGS2).
+    treasury_durations : Mapping of column name -> modified duration.
+        Defaults to approximate durations for DGS1/2/5/10.
 
     Returns
     -------
-    BacktestResult for the 60/40 strategy.
+    BacktestResult for the DV01-parity strategy.
     """
+    if treasury_durations is None:
+        treasury_durations = _TREASURY_DURATIONS
+
     oos = returns.loc[returns.index >= oos_start]
     n = len(returns.columns)
     cols = list(returns.columns)
 
-    w = np.zeros(n)
-    if long_asset in cols:
-        w[cols.index(long_asset)] = 0.60
-    if short_asset in cols:
-        w[cols.index(short_asset)] = 0.40
+    # Identify which Treasury instruments are present
+    present = {c: d for c, d in treasury_durations.items() if c in cols}
 
-    # If either asset is missing, fall back to equal weight for safety
-    if w.sum() == 0:
+    if not present:
+        # Fallback: equal weight everything
         w = np.ones(n) / n
+    else:
+        # Inverse-duration weights (DV01 parity)
+        inv_durations = {c: 1.0 / d for c, d in present.items()}
+        total_inv_dur = sum(inv_durations.values())
+        w = np.zeros(n)
+        for c, inv_d in inv_durations.items():
+            w[cols.index(c)] = inv_d / total_inv_dur
 
     port_rets = oos.dot(w)
-    port_rets.name = "60_40_proxy"
+    port_rets.name = "duration_weighted"
 
     weights_df = pd.DataFrame(
         np.tile(w, (len(oos), 1)),
@@ -96,7 +115,7 @@ def sixty_forty_benchmark(
     turnover = pd.Series(0.0, index=oos.index, name="turnover")
 
     return BacktestResult(
-        model_name="60_40_proxy",
+        model_name="duration_weighted",
         portfolio_returns=port_rets,
         weights_history=weights_df,
         turnover=turnover,

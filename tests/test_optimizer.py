@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from optimizer.min_variance import MinVarianceOptimizer
 
@@ -41,3 +42,19 @@ def test_turnover_penalty():
     dist_no_tc = np.sum(np.abs(w_no_tc - prev_w))
     dist_tc = np.sum(np.abs(w_tc - prev_w))
     assert dist_tc <= dist_no_tc + 1e-6
+
+
+def test_max_weight_constraint(sample_cov):
+    """No asset should exceed max_weight."""
+    opt = MinVarianceOptimizer(long_only=True, max_weight=0.40)
+    w = opt.optimize(sample_cov)
+    assert np.all(w <= 0.40 + 1e-6)
+    np.testing.assert_almost_equal(w.sum(), 1.0, decimal=6)
+
+
+def test_max_weight_equal_weight_with_identity():
+    """With identity cov and max_weight=0.25, should get equal weight."""
+    cov = np.eye(4)
+    opt = MinVarianceOptimizer(long_only=True, max_weight=0.25)
+    w = opt.optimize(cov)
+    np.testing.assert_array_almost_equal(w, [0.25] * 4, decimal=4)

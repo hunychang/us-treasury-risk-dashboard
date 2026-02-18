@@ -82,3 +82,70 @@ def test_log_returns_fail_on_negatives(yields_with_negatives):
     rets_dropped = compute_returns(yields_with_negatives, method="log", missing_handling="drop")
     # Should have fewer rows than diff because NaN rows from log(negative) are dropped
     assert rets_dropped.shape[0] < yields_with_negatives.shape[0] - 1
+
+
+# --- Duration-adjusted return tests ---
+
+
+def test_duration_adj_returns_shape(sample_yields):
+    """duration_adj should produce the same number of columns and rows-1."""
+    rets = compute_returns(sample_yields, method="duration_adj")
+    assert rets.shape[0] == sample_yields.shape[0] - 1
+    assert rets.shape[1] == sample_yields.shape[1]
+
+
+def test_duration_adj_treasury_sign():
+    """When yield increases, bond price should decrease (negative return)."""
+    dates = pd.bdate_range("2020-01-01", periods=3)
+    yields = pd.DataFrame(
+        {"DGS10": [4.00, 4.10, 4.05]},  # +10bp then -5bp
+        index=dates,
+    )
+    rets = compute_returns(yields, method="duration_adj")
+    # DGS10 duration ~8.5; +10bp = +0.10 pp; return = -8.5 * 0.10/100 = -0.0085
+    assert rets["DGS10"].iloc[0] < 0  # yield went up -> price down
+    assert rets["DGS10"].iloc[1] > 0  # yield went down -> price up
+    np.testing.assert_almost_equal(rets["DGS10"].iloc[0], -8.5 * 0.001, decimal=6)
+
+
+def test_duration_adj_spread():
+    """Spread returns should be scaled diff."""
+    dates = pd.bdate_range("2020-01-01", periods=3)
+    yields = pd.DataFrame(
+        {"BAMLC0A0CM": [1.50, 1.55, 1.45]},
+        index=dates,
+    )
+    rets = compute_returns(yields, method="duration_adj")
+    # diff = +0.05, scaled by 0.01 -> 0.0005
+    np.testing.assert_almost_equal(rets["BAMLC0A0CM"].iloc[0], 0.0005, decimal=6)
+
+
+def test_duration_adj_vix():
+    """VIX should use simple percent change."""
+    dates = pd.bdate_range("2020-01-01", periods=3)
+    yields = pd.DataFrame(
+        {"VIXCLS": [20.0, 22.0, 21.0]},
+        index=dates,
+    )
+    rets = compute_returns(yields, method="duration_adj")
+    # simple pct_change: (22-20)/20 = 0.10
+    np.testing.assert_almost_equal(rets["VIXCLS"].iloc[0], 0.10, decimal=6)
+
+
+def test_duration_adj_mixed_instruments():
+    """Full 10-instrument test with mixed types."""
+    np.random.seed(789)
+    dates = pd.bdate_range("2020-01-01", periods=100)
+    cols = ["DGS1", "DGS2", "DGS5", "DGS10",
+            "T10Y2Y", "BAMLC0A0CM", "BAMLH0A0HYM2", "BAA10Y", "T5YIE", "VIXCLS"]
+    # Realistic yield levels
+    base = np.array([1.5, 2.0, 3.0, 4.0, 0.5, 1.2, 3.5, 2.0, 2.5, 20.0])
+    changes = np.random.randn(100, 10) * np.array([0.02] * 4 + [0.05] * 5 + [1.0])
+    levels = base + np.cumsum(changes, axis=0)
+    levels[:, 9] = np.abs(levels[:, 9]) + 10  # VIX must be positive
+    levels[:, 0:4] = np.abs(levels[:, 0:4]) + 0.1  # yields must be positive
+    df = pd.DataFrame(levels, index=dates, columns=cols)
+
+    rets = compute_returns(df, method="duration_adj")
+    assert rets.shape == (99, 10)
+    assert not rets.isna().any().any()

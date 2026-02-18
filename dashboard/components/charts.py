@@ -13,7 +13,7 @@ from metrics.performance import (
     rolling_volatility,
 )
 
-_BENCHMARK_NAMES = {"equal_weight", "60_40_proxy", "treasuries_only"}
+_BENCHMARK_NAMES = {"equal_weight", "duration_weighted", "treasuries_only"}
 
 
 def plot_cumulative_returns(results: Dict[str, BacktestResult]) -> go.Figure:
@@ -66,23 +66,29 @@ def plot_weights_over_time(result: BacktestResult) -> go.Figure:
 
 
 def plot_drawdowns(results: Dict[str, BacktestResult]) -> go.Figure:
-    """Drawdown chart for all models."""
+    """Drawdown chart for all models — clean lines without overlapping fills."""
     fig = go.Figure()
     for name, res in results.items():
         dd = drawdown_series(res.portfolio_returns)
+        is_benchmark = name in _BENCHMARK_NAMES
         fig.add_trace(
             go.Scatter(
                 x=dd.index,
                 y=dd.values,
                 mode="lines",
                 name=name,
-                fill="tozeroy",
+                line=dict(
+                    dash="dash" if is_benchmark else "solid",
+                    width=1.5 if is_benchmark else 2,
+                ),
             )
         )
     fig.update_layout(
         yaxis_title="Drawdown",
+        yaxis_tickformat=".1%",
         xaxis_title="Date",
         hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left"),
         margin=dict(l=50, r=20, t=30, b=50),
     )
     return fig

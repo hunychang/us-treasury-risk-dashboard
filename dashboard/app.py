@@ -29,7 +29,7 @@ from optimizer.min_variance import MinVarianceOptimizer
 from backtester.engine import BacktestEngine
 from backtester.benchmarks import (
     equal_weight_benchmark,
-    sixty_forty_benchmark,
+    duration_weighted_benchmark,
     treasuries_only_benchmark,
 )
 from metrics.performance import metrics_comparison_table
@@ -43,6 +43,7 @@ from dashboard.components.charts import (
 )
 from dashboard.components.tables import render_metrics_table
 from dashboard.components.export import export_buttons
+from dashboard.components.assumptions import render_assumptions
 
 
 # ------------------------------------------------------------------
@@ -62,6 +63,7 @@ def _load_data():
         method=cfg.data.return_type,
         interpolation=cfg.data.interpolation,
         missing_handling=cfg.data.missing_handling,
+        instrument_metadata=cfg.data.instrument_metadata,
     )
     return cfg, returns
 
@@ -97,7 +99,7 @@ def main() -> None:
     st.title("U.S. Treasury Risk Management Dashboard")
     st.caption(
         "Compare minimum-variance portfolios built with different "
-        "covariance estimators on U.S. Treasury yields."
+        "covariance estimators on U.S. Treasury yields and risk spreads."
     )
 
     # --- Load data --------------------------------------------------------
@@ -111,11 +113,15 @@ def main() -> None:
         st.warning("Please enable at least one risk model in the sidebar.")
         st.stop()
 
+    # --- Assumptions panel (collapsible) ----------------------------------
+    render_assumptions(cfg, sidebar_cfg)
+
     # --- Run backtest -----------------------------------------------------
     optimizer = MinVarianceOptimizer(
         long_only=cfg.portfolio.long_only,
         weight_sum=cfg.portfolio.weight_sum,
         transaction_cost_bps=cfg.portfolio.transaction_cost_bps,
+        max_weight=sidebar_cfg["max_weight"],
     )
 
     oos_start = pd.Timestamp(sidebar_cfg["oos_start"])
@@ -133,8 +139,8 @@ def main() -> None:
     # --- Add benchmarks ---------------------------------------------------
     if sidebar_cfg["show_equal_weight"]:
         results["equal_weight"] = equal_weight_benchmark(returns, oos_start)
-    if sidebar_cfg["show_sixty_forty"]:
-        results["60_40_proxy"] = sixty_forty_benchmark(returns, oos_start)
+    if sidebar_cfg["show_duration_weighted"]:
+        results["duration_weighted"] = duration_weighted_benchmark(returns, oos_start)
     if sidebar_cfg["show_treasuries_only"]:
         results["treasuries_only"] = treasuries_only_benchmark(returns, oos_start)
 

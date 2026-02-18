@@ -80,4 +80,4 @@ class TestVAR:
 
     def test_name(self):
         model = VARModel()
-        assert model.name() == "var"
+        assert model.name() == "var1_cov"

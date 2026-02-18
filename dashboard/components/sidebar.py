@@ -24,7 +24,7 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         "EWMA", value=cfg.models.ewma.enabled
     )
     var_on = st.sidebar.checkbox(
-        "VAR", value=cfg.models.var.enabled
+        "VAR(1) Residual Cov", value=cfg.models.var.enabled
     )
 
     st.sidebar.divider()
@@ -44,10 +44,19 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         max_value=date(2024, 1, 1),
     )
 
+    max_weight = st.sidebar.slider(
+        "Max Weight per Asset",
+        min_value=0.10,
+        max_value=1.0,
+        value=cfg.portfolio.max_weight,
+        step=0.05,
+        help="Maximum allocation to any single instrument.",
+    )
+
     st.sidebar.divider()
     st.sidebar.header("Benchmarks")
     show_equal_weight = st.sidebar.checkbox("Equal Weight (1/N)", value=True)
-    show_sixty_forty = st.sidebar.checkbox("60/40 Proxy", value=True)
+    show_duration_weighted = st.sidebar.checkbox("DV01 Parity", value=True)
     show_treasuries_only = st.sidebar.checkbox("Treasuries Only (1/4)", value=True)
 
     return {
@@ -56,7 +65,8 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         "var_on": var_on,
         "rebalance_freq": rebalance_freq,
         "oos_start": oos_start,
+        "max_weight": max_weight,
         "show_equal_weight": show_equal_weight,
-        "show_sixty_forty": show_sixty_forty,
+        "show_duration_weighted": show_duration_weighted,
         "show_treasuries_only": show_treasuries_only,
     }

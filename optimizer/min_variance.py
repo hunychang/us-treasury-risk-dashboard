@@ -30,10 +30,12 @@ class MinVarianceOptimizer:
         long_only: bool = True,
         weight_sum: float = 1.0,
         transaction_cost_bps: float = 0.0,
+        max_weight: float = 1.0,
     ) -> None:
         self._long_only = long_only
         self._weight_sum = weight_sum
         self._tc = transaction_cost_bps / 10_000  # bps -> decimal
+        self._max_weight = max_weight
 
     def optimize(
         self,
@@ -73,7 +75,9 @@ class MinVarianceOptimizer:
         ]
 
         bounds = (
-            [(0.0, 1.0)] * n if self._long_only else [(None, None)] * n
+            [(0.0, self._max_weight)] * n
+            if self._long_only
+            else [(-self._max_weight, self._max_weight)] * n
         )
 
         result = minimize(

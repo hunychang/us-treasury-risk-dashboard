@@ -49,7 +49,7 @@ class VARModel(RiskModel):
     # ------------------------------------------------------------------
 
     def name(self) -> str:
-        return "var"
+        return "var1_cov"
 
     def min_history(self) -> int:
         return max(self._window, self._lags + 60)

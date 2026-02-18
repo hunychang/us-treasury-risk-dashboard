@@ -9,7 +9,7 @@ from __future__ import annotations
 import yaml
 from datetime import date
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -24,9 +24,10 @@ class DataConfig(BaseModel):
     frequency: str = "daily"
     start_date: date = date(1995, 1, 1)
     end_date: Optional[date] = None
-    return_type: str = "log"
+    return_type: str = "duration_adj"
     interpolation: str = "linear"
     missing_handling: str = "drop"
+    instrument_metadata: Dict[str, dict] = Field(default_factory=dict)
 
 
 class PortfolioConfig(BaseModel):
@@ -34,6 +35,7 @@ class PortfolioConfig(BaseModel):
     long_only: bool = True
     weight_sum: float = 1.0
     leverage: bool = False
+    max_weight: float = 0.40
     rebalance_frequency: str = "monthly"  # daily | weekly | monthly
     transaction_cost_bps: float = 0.0
 

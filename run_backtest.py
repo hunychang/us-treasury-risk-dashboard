@@ -25,7 +25,7 @@ from optimizer.min_variance import MinVarianceOptimizer
 from backtester.engine import BacktestEngine
 from backtester.benchmarks import (
     equal_weight_benchmark,
-    sixty_forty_benchmark,
+    duration_weighted_benchmark,
     treasuries_only_benchmark,
 )
 from metrics.performance import metrics_comparison_table
@@ -47,6 +47,7 @@ def main() -> None:
         method=cfg.data.return_type,
         interpolation=cfg.data.interpolation,
         missing_handling=cfg.data.missing_handling,
+        instrument_metadata=cfg.data.instrument_metadata,
     )
     print(
         f"Data loaded: {returns.shape[0]} observations, "
@@ -63,6 +64,7 @@ def main() -> None:
         long_only=cfg.portfolio.long_only,
         weight_sum=cfg.portfolio.weight_sum,
         transaction_cost_bps=cfg.portfolio.transaction_cost_bps,
+        max_weight=cfg.portfolio.max_weight,
     )
 
     # ---- Backtest -----------------------------------------------------------
@@ -77,8 +79,8 @@ def main() -> None:
     # ---- Benchmarks ---------------------------------------------------------
     if "equal_weight" in cfg.evaluation.benchmark:
         results["equal_weight"] = equal_weight_benchmark(returns, oos_start)
-    if "60_40_proxy" in cfg.evaluation.benchmark:
-        results["60_40_proxy"] = sixty_forty_benchmark(returns, oos_start)
+    if "duration_weighted" in cfg.evaluation.benchmark:
+        results["duration_weighted"] = duration_weighted_benchmark(returns, oos_start)
     if "treasuries_only" in cfg.evaluation.benchmark:
         results["treasuries_only"] = treasuries_only_benchmark(returns, oos_start)
 

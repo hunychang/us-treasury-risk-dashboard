@@ -42,4 +42,17 @@ def test_config_models_enabled():
 def test_config_evaluation():
     cfg = load_config()
     assert "equal_weight" in cfg.evaluation.benchmark
-    assert "60_40_proxy" in cfg.evaluation.benchmark
+    assert "duration_weighted" in cfg.evaluation.benchmark
+
+
+def test_config_instrument_metadata():
+    cfg = load_config()
+    assert "DGS10" in cfg.data.instrument_metadata
+    assert cfg.data.instrument_metadata["DGS10"]["type"] == "treasury_yield"
+    assert cfg.data.instrument_metadata["DGS10"]["duration"] == 8.5
+    assert cfg.data.return_type == "duration_adj"
+
+
+def test_config_max_weight():
+    cfg = load_config()
+    assert cfg.portfolio.max_weight == 0.40

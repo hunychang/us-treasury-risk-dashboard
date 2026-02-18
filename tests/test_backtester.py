@@ -8,7 +8,7 @@ import pandas as pd
 from backtester.engine import BacktestEngine
 from backtester.benchmarks import (
     equal_weight_benchmark,
-    sixty_forty_benchmark,
+    duration_weighted_benchmark,
     treasuries_only_benchmark,
 )
 from models.rolling_cov import RollingCovarianceModel
@@ -58,15 +58,40 @@ def test_equal_weight_benchmark(sample_returns):
     )
 
 
-def test_sixty_forty_benchmark(sample_returns):
-    res = sixty_forty_benchmark(sample_returns, sample_returns.index[300])
-    assert res.model_name == "60_40_proxy"
+def test_duration_weighted_benchmark(sample_returns):
+    """DV01-parity: shorter duration -> higher weight."""
+    res = duration_weighted_benchmark(sample_returns, sample_returns.index[300])
+    assert res.model_name == "duration_weighted"
     assert len(res.portfolio_returns) > 0
     w = res.weights_history.iloc[0].values
-    # DGS10 = 60%, DGS2 = 40%
+    # Weights should sum to 1
+    np.testing.assert_almost_equal(w.sum(), 1.0, decimal=6)
+    # Shorter duration -> higher weight (DGS1 should have largest weight)
     cols = list(sample_returns.columns)
-    assert w[cols.index("DGS10")] == 0.60
-    assert w[cols.index("DGS2")] == 0.40
+    assert w[cols.index("DGS1")] > w[cols.index("DGS10")]
+
+
+def test_duration_weighted_benchmark_10_assets():
+    """Non-Treasury instruments should get zero weight."""
+    np.random.seed(99)
+    dates = pd.bdate_range("2000-01-03", periods=1000)
+    cols = [
+        "DGS1", "DGS2", "DGS5", "DGS10",
+        "T10Y2Y", "BAMLC0A0CM", "BAMLH0A0HYM2", "BAA10Y", "T5YIE", "VIXCLS",
+    ]
+    data = np.random.randn(1000, 10) * 0.01
+    returns = pd.DataFrame(data, index=dates, columns=cols)
+
+    res = duration_weighted_benchmark(returns, returns.index[300])
+    w = res.weights_history.iloc[0]
+    # Treasury columns get positive weight
+    for tc in ["DGS1", "DGS2", "DGS5", "DGS10"]:
+        assert w[tc] > 0
+    # Spread columns get 0
+    for sc in ["T10Y2Y", "BAMLC0A0CM", "BAMLH0A0HYM2", "BAA10Y", "T5YIE", "VIXCLS"]:
+        assert w[sc] == 0.0
+    # Weights sum to 1
+    np.testing.assert_almost_equal(w.sum(), 1.0, decimal=6)
 
 
 def test_treasuries_only_benchmark_4_assets(sample_returns):
