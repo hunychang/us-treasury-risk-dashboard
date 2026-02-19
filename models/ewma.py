@@ -65,4 +65,7 @@ class EWMAModel(RiskModel):
             r = data[t].reshape(-1, 1)  # (n, 1)
             cov = lam * cov + (1 - lam) * (r @ r.T)
 
+        # Ridge regularization for numerical stability
+        cov = cov + np.eye(n) * 1e-6
+
         return cov * self._ann

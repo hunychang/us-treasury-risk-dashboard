@@ -87,7 +87,7 @@ class MinVarianceOptimizer:
             jac=grad,
             bounds=bounds,
             constraints=constraints,
-            options={"maxiter": 1000, "ftol": 1e-12},
+            options={"maxiter": 2000, "ftol": 1e-10},
         )
 
         if not result.success:

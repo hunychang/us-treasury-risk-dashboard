@@ -24,6 +24,7 @@ def build_models(cfg: ModelsConfig) -> list[RiskModel]:
             lags=cfg.var.lags,
             forecast_horizon=cfg.var.forecast_horizon,
             covariance_from_residuals=cfg.var.covariance_from_residuals,
+            annualization_factor=cfg.var.annualization_factor,
         ))
     return models
 

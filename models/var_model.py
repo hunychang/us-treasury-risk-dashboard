@@ -72,9 +72,12 @@ class VARModel(RiskModel):
             fitted = model.fit(maxlags=self._lags, ic=None, verbose=False)
 
         if self._use_residual_cov:
-            cov = np.array(fitted.sigma_u) * self._ann
+            cov = np.array(fitted.sigma_u)
         else:
             fevd = fitted.forecast_cov(steps=self._horizon)
-            cov = np.array(fevd[-1]) * self._ann
+            cov = np.array(fevd[-1])
 
-        return cov
+        # Ridge regularization for numerical stability
+        cov = cov + np.eye(cov.shape[0]) * 1e-6
+
+        return cov * self._ann

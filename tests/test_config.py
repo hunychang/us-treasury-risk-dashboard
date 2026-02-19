@@ -29,7 +29,7 @@ def test_config_portfolio_constraints():
     cfg = load_config()
     assert cfg.portfolio.weight_sum == 1.0
     assert cfg.portfolio.leverage is False
-    assert cfg.portfolio.transaction_cost_bps == 0.0
+    assert cfg.portfolio.transaction_cost_bps == 5.0
 
 
 def test_config_models_enabled():
@@ -56,3 +56,27 @@ def test_config_instrument_metadata():
 def test_config_max_weight():
     cfg = load_config()
     assert cfg.portfolio.max_weight == 0.40
+
+
+def test_config_interpolation_ffill():
+    cfg = load_config()
+    assert cfg.data.interpolation == "ffill"
+
+
+def test_config_shrinkage_ledoit_wolf():
+    cfg = load_config()
+    assert cfg.models.rolling_cov.shrinkage == "ledoit_wolf"
+
+
+def test_config_var_annualization_factor():
+    cfg = load_config()
+    assert cfg.models.var.annualization_factor == 252
+
+
+def test_config_spread_duration_metadata():
+    cfg = load_config()
+    meta = cfg.data.instrument_metadata
+    assert meta["BAMLC0A0CM"]["spread_duration"] == 7.0
+    assert meta["BAMLH0A0HYM2"]["spread_duration"] == 4.0
+    assert meta["T5YIE"]["spread_duration"] == 5.0
+    assert meta["T10Y2Y"]["spread_duration"] == 7.0

@@ -60,6 +60,7 @@ class VARConfig(BaseModel):
     lags: int = 1
     forecast_horizon: int = 1
     covariance_from_residuals: bool = True
+    annualization_factor: int = 252
 
 
 class ModelsConfig(BaseModel):

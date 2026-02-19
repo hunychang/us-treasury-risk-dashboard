@@ -53,6 +53,15 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         help="Maximum allocation to any single instrument.",
     )
 
+    tc_bps = st.sidebar.slider(
+        "Transaction Cost (bps)",
+        min_value=0,
+        max_value=50,
+        value=int(cfg.portfolio.transaction_cost_bps),
+        step=1,
+        help="Round-trip transaction cost in basis points, applied as turnover penalty.",
+    )
+
     st.sidebar.divider()
     st.sidebar.header("Benchmarks")
     show_equal_weight = st.sidebar.checkbox("Equal Weight (1/N)", value=True)
@@ -66,6 +75,7 @@ def render_sidebar(cfg: ProjectConfig) -> dict:
         "rebalance_freq": rebalance_freq,
         "oos_start": oos_start,
         "max_weight": max_weight,
+        "tc_bps": tc_bps,
         "show_equal_weight": show_equal_weight,
         "show_duration_weighted": show_duration_weighted,
         "show_treasuries_only": show_treasuries_only,

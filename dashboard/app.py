@@ -90,16 +90,17 @@ def _build_models_from_sidebar(
 
 def main() -> None:
     st.set_page_config(
-        page_title="U.S. Treasury Risk Dashboard",
+        page_title="U.S. Treasury & Credit Risk-Factor Dashboard",
         page_icon=":chart_with_upwards_trend:",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
-    st.title("U.S. Treasury Risk Management Dashboard")
+    st.title("U.S. Treasury & Credit Risk-Factor Dashboard")
     st.caption(
-        "Compare minimum-variance portfolios built with different "
-        "covariance estimators on U.S. Treasury yields and risk spreads."
+        "Compare minimum-variance risk-factor portfolios built with different "
+        "covariance estimators on U.S. Treasury yields, credit spreads, "
+        "breakevens, and volatility."
     )
 
     # --- Load data --------------------------------------------------------
@@ -121,7 +122,7 @@ def main() -> None:
     optimizer = MinVarianceOptimizer(
         long_only=cfg.portfolio.long_only,
         weight_sum=cfg.portfolio.weight_sum,
-        transaction_cost_bps=cfg.portfolio.transaction_cost_bps,
+        transaction_cost_bps=sidebar_cfg.get("tc_bps", cfg.portfolio.transaction_cost_bps),
         max_weight=sidebar_cfg["max_weight"],
     )
 

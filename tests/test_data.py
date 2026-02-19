@@ -109,15 +109,18 @@ def test_duration_adj_treasury_sign():
 
 
 def test_duration_adj_spread():
-    """Spread returns should be scaled diff."""
+    """Spread returns should use spread-duration scaling: -SD * diff * scale."""
     dates = pd.bdate_range("2020-01-01", periods=3)
     yields = pd.DataFrame(
         {"BAMLC0A0CM": [1.50, 1.55, 1.45]},
         index=dates,
     )
     rets = compute_returns(yields, method="duration_adj")
-    # diff = +0.05, scaled by 0.01 -> 0.0005
-    np.testing.assert_almost_equal(rets["BAMLC0A0CM"].iloc[0], 0.0005, decimal=6)
+    # diff = +0.05 (spread widened), SD=7.0, scale=0.01
+    # return = -7.0 * 0.05 * 0.01 = -0.0035 (widening = loss)
+    np.testing.assert_almost_equal(rets["BAMLC0A0CM"].iloc[0], -0.0035, decimal=6)
+    # diff = -0.10 (spread tightened) -> return = -7.0 * (-0.10) * 0.01 = +0.007
+    np.testing.assert_almost_equal(rets["BAMLC0A0CM"].iloc[1], 0.007, decimal=6)
 
 
 def test_duration_adj_vix():

@@ -17,11 +17,11 @@ _DEFAULT_METADATA: Dict[str, dict] = {
     "DGS2":         {"type": "treasury_yield", "duration": 1.9},
     "DGS5":         {"type": "treasury_yield", "duration": 4.5},
     "DGS10":        {"type": "treasury_yield", "duration": 8.5},
-    "T10Y2Y":       {"type": "spread", "scale": 0.01},
-    "BAMLC0A0CM":   {"type": "spread", "scale": 0.01},
-    "BAMLH0A0HYM2": {"type": "spread", "scale": 0.01},
-    "BAA10Y":       {"type": "spread", "scale": 0.01},
-    "T5YIE":        {"type": "spread", "scale": 0.01},
+    "T10Y2Y":       {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
+    "BAMLC0A0CM":   {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
+    "BAMLH0A0HYM2": {"type": "spread", "spread_duration": 4.0, "scale": 0.01},
+    "BAA10Y":       {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
+    "T5YIE":        {"type": "spread", "spread_duration": 5.0, "scale": 0.01},
     "VIXCLS":       {"type": "index", "return_method": "simple"},
 }
 
@@ -97,9 +97,12 @@ def _duration_adjusted_returns(
       bond-price approximation ``dP/P ~ -D_mod * dy``, where *dy* is the
       daily yield change expressed as a decimal (FRED percentage-point
       value / 100).
-    * **Spreads** (``type='spread'``): First difference multiplied by a
-      scale factor (default 0.01) to convert from percentage-point
-      changes to decimal-scale signals comparable to price returns.
+    * **Spreads** (``type='spread'``): Duration-scaled first difference:
+      ``-spread_duration * diff * scale``.  The negative sign mirrors the
+      Treasury convention (spread widening ≈ price loss).  ``spread_duration``
+      is the effective spread duration of the instrument (e.g., ~7 yr for IG
+      credit); ``scale`` (default 0.01) converts percentage-point changes
+      to decimals.
     * **Indices** (``type='index'``): Simple percent change on the raw
       level, appropriate for volatility indices like VIX.
     """
@@ -118,8 +121,9 @@ def _duration_adjusted_returns(
             parts[col] = -duration * dy
 
         elif inst_type == "spread":
+            spread_dur = meta.get("spread_duration", 1.0)
             scale = meta.get("scale", 0.01)
-            parts[col] = df[col].diff() * scale
+            parts[col] = -spread_dur * df[col].diff() * scale
 
         elif inst_type == "index":
             ret_method = meta.get("return_method", "simple")
