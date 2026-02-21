@@ -55,7 +55,12 @@ class MinVarianceOptimizer:
         (n,) array of optimal weights.
         """
         n = cov_matrix.shape[0]
-        w0 = np.ones(n) / n  # equal-weight initial guess
+
+        # Warm-start: use previous weights if available (faster convergence)
+        if prev_weights is not None and len(prev_weights) == n:
+            w0 = prev_weights.copy()
+        else:
+            w0 = np.ones(n) / n
 
         def objective(w: np.ndarray) -> float:
             port_var = w @ cov_matrix @ w
@@ -65,9 +70,10 @@ class MinVarianceOptimizer:
 
         def grad(w: np.ndarray) -> np.ndarray:
             g = 2.0 * cov_matrix @ w
-            # Note: turnover penalty is non-smooth, so the gradient is
-            # approximate when tc > 0.  SLSQP handles this adequately
-            # for the small problems we solve here.
+            if self._tc > 0 and prev_weights is not None:
+                # Subgradient of L1 turnover penalty
+                diff = w - prev_weights
+                g = g + self._tc * np.sign(diff)
             return g
 
         constraints = [
@@ -87,7 +93,7 @@ class MinVarianceOptimizer:
             jac=grad,
             bounds=bounds,
             constraints=constraints,
-            options={"maxiter": 2000, "ftol": 1e-10},
+            options={"maxiter": 500, "ftol": 1e-9},
         )
 
         if not result.success:

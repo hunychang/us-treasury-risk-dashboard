@@ -64,6 +64,27 @@ class TestEWMA:
         model = EWMAModel()
         assert model.name() == "ewma"
 
+    def test_incremental_cache_consistency(self, sample_returns):
+        """Cached EWMA should produce identical results to uncached."""
+        # Fresh model (no cache): compute at date 700
+        fresh_model = EWMAModel(lambda_=0.94)
+        cov_fresh = fresh_model.estimate(sample_returns, sample_returns.index[700])
+
+        # Cached model: compute at date 500, then at date 700
+        cached_model = EWMAModel(lambda_=0.94)
+        cached_model.estimate(sample_returns, sample_returns.index[500])
+        cov_cached = cached_model.estimate(sample_returns, sample_returns.index[700])
+
+        np.testing.assert_array_almost_equal(cov_cached, cov_fresh, decimal=10)
+
+    def test_reset_cache(self, sample_returns):
+        """reset_cache should force a full recomputation."""
+        model = EWMAModel(lambda_=0.94)
+        model.estimate(sample_returns, sample_returns.index[500])
+        model.reset_cache()
+        assert model._cached_cov is None
+        assert model._cached_t == 0
+
 
 class TestVAR:
 

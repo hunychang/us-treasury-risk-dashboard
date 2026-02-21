@@ -87,7 +87,9 @@ class BacktestEngine:
         results: Dict[str, BacktestResult] = {}
         for model in self._models:
             logger.info(f"Backtesting model: {model.name()}")
-            results[model.name()] = self._run_single(model, rebal_dates)
+            results[model.name()] = self._run_single(
+                model, rebal_dates, oos_returns
+            )
 
         return results
 
@@ -99,9 +101,9 @@ class BacktestEngine:
         self,
         model: RiskModel,
         rebal_dates: List[pd.Timestamp],
+        oos_returns: pd.DataFrame,
     ) -> BacktestResult:
         n_assets = len(self._asset_names)
-        oos_returns = self._returns.loc[self._returns.index >= self._oos_start]
 
         prev_weights: Optional[np.ndarray] = None
         current_weights = np.ones(n_assets) / n_assets
@@ -114,6 +116,9 @@ class BacktestEngine:
         port_rets = pd.Series(
             0.0, index=oos_returns.index, dtype=float, name=model.name()
         )
+        # Get underlying NumPy array for fast direct writes
+        port_arr = port_rets.values
+        oos_index = oos_returns.index
 
         for i, rebal_date in enumerate(rebal_dates):
             # 1. Estimate covariance
@@ -139,22 +144,21 @@ class BacktestEngine:
             all_turnovers.append(turnover)
             valid_rebal_dates.append(rebal_date)
 
-            # 3. Holding period
+            # 3. Holding period — use searchsorted for O(log N) slicing
             if i + 1 < len(rebal_dates):
                 next_date = rebal_dates[i + 1]
             else:
-                next_date = oos_returns.index[-1]
+                next_date = oos_index[-1]
 
-            mask = (oos_returns.index > rebal_date) & (
-                oos_returns.index <= next_date
-            )
-            period_rets = oos_returns.loc[mask]
+            start_idx = oos_index.searchsorted(rebal_date, side="right")
+            end_idx = oos_index.searchsorted(next_date, side="right")
+            period_vals = oos_returns.values[start_idx:end_idx]
 
-            # 4. Daily returns with buy-and-hold weight drift
+            # 4. Daily returns with buy-and-hold weight drift (NumPy-only)
             w = new_weights.copy()
-            for idx in period_rets.index:
-                row = period_rets.loc[idx].values
-                port_rets.loc[idx] = float(np.dot(w, row))
+            for j in range(len(period_vals)):
+                row = period_vals[j]
+                port_arr[start_idx + j] = np.dot(w, row)
                 # Drift weights
                 w = w * (1.0 + row)
                 w_sum = w.sum()

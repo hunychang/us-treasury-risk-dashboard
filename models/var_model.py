@@ -57,8 +57,9 @@ class VARModel(RiskModel):
     def estimate(
         self, returns: pd.DataFrame, as_of_date: pd.Timestamp
     ) -> np.ndarray:
-        mask = returns.index <= as_of_date
-        data = returns.loc[mask].iloc[-self._window :]
+        end_pos = returns.index.searchsorted(as_of_date, side="right")
+        start_pos = max(0, end_pos - self._window)
+        data = returns.iloc[start_pos:end_pos]
 
         if len(data) < self._lags + 30:
             raise ValueError(

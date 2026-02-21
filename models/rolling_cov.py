@@ -44,8 +44,9 @@ class RollingCovarianceModel(RiskModel):
         self, returns: pd.DataFrame, as_of_date: pd.Timestamp
     ) -> np.ndarray:
         # Select trailing window up to (and including) as_of_date
-        mask = returns.index <= as_of_date
-        trailing = returns.loc[mask].iloc[-self._window :]
+        end_pos = returns.index.searchsorted(as_of_date, side="right")
+        start_pos = max(0, end_pos - self._window)
+        trailing = returns.iloc[start_pos:end_pos]
 
         if len(trailing) < self._window:
             raise ValueError(
