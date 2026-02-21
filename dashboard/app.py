@@ -23,11 +23,15 @@ from config.config_loader import load_config, ModelsConfig
 from data.fred_provider import FREDProvider
 from data.cache_manager import CachedProvider
 from data.returns import compute_returns
+from data.shock_provider import ShockProvider
 from models.rolling_cov import RollingCovarianceModel
 from models.ewma import EWMAModel
 from models.var_model import VARModel
 from models.base_model import RiskModel
+from models.shock_conditioned import ShockConditionedModel
+from models.irf.storage import IRFStore
 from optimizer.min_variance import MinVarianceOptimizer
+from optimizer.cvar_optimizer import CVaROptimizer
 from backtester.engine import BacktestEngine
 from backtester.benchmarks import (
     equal_weight_benchmark,
@@ -93,11 +97,16 @@ def _run_cached_backtest(
     var_horizon: int,
     var_resid_cov: bool,
     var_ann: int,
+    objective: str = "minimum_variance",
+    cvar_confidence: float = 0.95,
+    shock_enabled: bool = False,
+    shock_scale: float = 1.0,
+    shock_horizon: int = 12,
 ):
     """Run backtest with Streamlit caching keyed on all configuration params."""
     oos_start = pd.Timestamp(oos_start_str)
 
-    # Build models from params (not from config objects, for hashability)
+    # Build baseline models
     models = []
     if "rolling_cov" in model_names:
         models.append(RollingCovarianceModel(
@@ -118,12 +127,49 @@ def _run_cached_backtest(
             annualization_factor=var_ann,
         ))
 
-    optimizer = MinVarianceOptimizer(
-        long_only=long_only,
-        weight_sum=weight_sum,
-        transaction_cost_bps=tc_bps,
-        max_weight=max_weight,
-    )
+    # Add shock-conditioned models if enabled
+    if shock_enabled:
+        irf_store = IRFStore()
+        if irf_store.exists():
+            irf_results = irf_store.load()
+            cfg = load_config()
+            shock_provider = ShockProvider(
+                csv_path=cfg.shocks.csv_path,
+                shock_column=cfg.shocks.shock_column,
+            )
+            shocks = shock_provider.load_as_series(
+                start_date=cfg.data.start_date, end_date=cfg.data.end_date
+            )
+            shocks_daily = shock_provider.reindex_to_daily(
+                shocks, _returns.index, fill_value=0.0
+            )
+            conditioned = []
+            for model in models:
+                conditioned.append(ShockConditionedModel(
+                    baseline_model=model,
+                    irf_results=irf_results,
+                    shock_series=shocks_daily,
+                    scale_factor=shock_scale,
+                    response_horizon=shock_horizon,
+                ))
+            models.extend(conditioned)
+
+    # Build optimizer
+    if objective == "cvar":
+        optimizer = CVaROptimizer(
+            confidence_level=cvar_confidence,
+            long_only=long_only,
+            weight_sum=weight_sum,
+            max_weight=max_weight,
+            transaction_cost_bps=tc_bps,
+        )
+    else:
+        optimizer = MinVarianceOptimizer(
+            long_only=long_only,
+            weight_sum=weight_sum,
+            transaction_cost_bps=tc_bps,
+            max_weight=max_weight,
+        )
 
     engine = BacktestEngine(
         _returns, models, optimizer, rebalance_freq, oos_start,
@@ -209,6 +255,11 @@ def main() -> None:
         var_horizon=cfg.models.var.forecast_horizon,
         var_resid_cov=cfg.models.var.covariance_from_residuals,
         var_ann=cfg.models.var.annualization_factor,
+        objective=sidebar_cfg.get("objective", "minimum_variance"),
+        cvar_confidence=sidebar_cfg.get("cvar_confidence", 0.95),
+        shock_enabled=sidebar_cfg.get("shock_enabled", False),
+        shock_scale=sidebar_cfg.get("shock_scale", 1.0),
+        shock_horizon=sidebar_cfg.get("shock_horizon", 12),
     )
 
     # --- Add benchmarks (cached) ------------------------------------------
@@ -230,6 +281,52 @@ def main() -> None:
 
     # === Dashboard layout =================================================
 
+    # --- Shock & IRF panels (if enabled) ----------------------------------
+    if sidebar_cfg.get("shock_enabled", False):
+        from dashboard.components.shock_panel import render_shock_panel
+        from dashboard.components.irf_panel import render_irf_panel
+
+        shock_tab, irf_tab, perf_tab = st.tabs([
+            "Shock Timeline", "Impulse Responses", "Portfolio Performance"
+        ])
+
+        with shock_tab:
+            st.subheader("Romer & Romer Monetary Policy Shocks")
+            try:
+                shock_provider = ShockProvider(
+                    csv_path=cfg.shocks.csv_path,
+                    shock_column=cfg.shocks.shock_column,
+                )
+                shocks = shock_provider.load_as_series(
+                    start_date=cfg.data.start_date, end_date=cfg.data.end_date
+                )
+                render_shock_panel(shocks, oos_start)
+            except Exception as e:
+                st.error(f"Could not load shock data: {e}")
+
+        with irf_tab:
+            st.subheader("Impulse Response Functions")
+            try:
+                irf_store = IRFStore()
+                if irf_store.exists():
+                    irf_results = irf_store.load()
+                    render_irf_panel(irf_results)
+                else:
+                    st.info(
+                        "No IRF results found. Run "
+                        "`python run_irf_estimation.py` to estimate IRFs."
+                    )
+            except Exception as e:
+                st.error(f"Could not load IRF results: {e}")
+
+        with perf_tab:
+            _render_performance_panels(results, model_names_list, returns, table=None)
+    else:
+        _render_performance_panels(results, model_names_list, returns, table=None)
+
+
+def _render_performance_panels(results, model_names_list, returns, table=None):
+    """Render the standard performance dashboard panels."""
     # Row 1: Cumulative performance
     st.subheader("Cumulative Performance")
     fig_cum = plot_cumulative_returns(results)
@@ -237,15 +334,16 @@ def main() -> None:
 
     # Row 2: Metrics comparison table
     st.subheader("Risk Metrics Comparison")
-    table = metrics_comparison_table(results)
-    render_metrics_table(table)
+    metrics_table = metrics_comparison_table(results)
+    render_metrics_table(metrics_table)
 
     # Row 3: Weights + Drawdown side by side
+    all_model_names = [n for n in results if n not in {"equal_weight", "duration_weighted", "treasuries_only"}]
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Portfolio Weights Over Time")
         model_for_weights = st.selectbox(
-            "Select model", model_names_list, key="weight_model"
+            "Select model", all_model_names, key="weight_model"
         )
         if model_for_weights in results:
             fig_w = plot_weights_over_time(results[model_for_weights])
@@ -270,7 +368,7 @@ def main() -> None:
 
     # Row 5: Exports
     st.divider()
-    export_buttons(results, table)
+    export_buttons(results, metrics_table)
 
 
 if __name__ == "__main__":

@@ -16,19 +16,29 @@ from metrics.performance import (
 _BENCHMARK_NAMES = {"equal_weight", "duration_weighted", "treasuries_only"}
 
 
+def _get_line_style(name: str) -> dict:
+    """Determine line style based on model name."""
+    if name in _BENCHMARK_NAMES:
+        return dict(dash="dash", width=1.5)
+    elif name.startswith("ShockCond("):
+        return dict(dash="dashdot", width=2.5)
+    else:
+        return dict(dash="solid", width=2)
+
+
 def plot_cumulative_returns(results: Dict[str, BacktestResult]) -> go.Figure:
     """Overlay cumulative-return paths for all models and benchmarks."""
     fig = go.Figure()
     for name, res in results.items():
         cum = cumulative_returns(res.portfolio_returns)
-        dash = "dash" if name in _BENCHMARK_NAMES else "solid"
+        line_style = _get_line_style(name)
         fig.add_trace(
             go.Scatter(
                 x=cum.index,
                 y=cum.values,
                 mode="lines",
                 name=name,
-                line=dict(dash=dash, width=2),
+                line=line_style,
             )
         )
     fig.update_layout(
@@ -70,17 +80,14 @@ def plot_drawdowns(results: Dict[str, BacktestResult]) -> go.Figure:
     fig = go.Figure()
     for name, res in results.items():
         dd = drawdown_series(res.portfolio_returns)
-        is_benchmark = name in _BENCHMARK_NAMES
+        line_style = _get_line_style(name)
         fig.add_trace(
             go.Scatter(
                 x=dd.index,
                 y=dd.values,
                 mode="lines",
                 name=name,
-                line=dict(
-                    dash="dash" if is_benchmark else "solid",
-                    width=1.5 if is_benchmark else 2,
-                ),
+                line=line_style,
             )
         )
     fig.update_layout(

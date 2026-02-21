@@ -15,14 +15,17 @@ data:
     - DGS2          # 2Y Treasury Yield
     - DGS5          # 5Y Treasury Yield
     - DGS10         # 10Y Treasury Yield
-    # Yield curve spread (term structure risk)
+    - DGS30         # 30Y Treasury Yield
+    # Yield curve spreads (term structure risk)
     - T10Y2Y        # 10Y-2Y Treasury Spread
+    - T10Y3M        # 10Y-3M Treasury Spread
     # Credit spreads (credit risk)
     - BAMLC0A0CM    # ICE BofA IG Corporate OAS
     - BAMLH0A0HYM2  # ICE BofA HY Corporate OAS
     - BAA10Y        # Moody's Baa minus 10Y Treasury
     # Inflation expectations
     - T5YIE         # 5Y Breakeven Inflation Rate
+    - T10YIE        # 10Y Breakeven Inflation Rate
     # Volatility / systemic stress
     - VIXCLS        # CBOE VIX Index
   frequency: daily
@@ -36,11 +39,14 @@ data:
     DGS2:          {type: treasury_yield, duration: 1.9}
     DGS5:          {type: treasury_yield, duration: 4.5}
     DGS10:         {type: treasury_yield, duration: 8.5}
+    DGS30:         {type: treasury_yield, duration: 19.5}
     T10Y2Y:        {type: spread, spread_duration: 7.0, scale: 0.01}
+    T10Y3M:        {type: spread, spread_duration: 8.0, scale: 0.01}
     BAMLC0A0CM:    {type: spread, spread_duration: 7.0, scale: 0.01}
     BAMLH0A0HYM2:  {type: spread, spread_duration: 4.0, scale: 0.01}
     BAA10Y:        {type: spread, spread_duration: 7.0, scale: 0.01}
     T5YIE:         {type: spread, spread_duration: 5.0, scale: 0.01}
+    T10YIE:        {type: spread, spread_duration: 8.5, scale: 0.01}
     VIXCLS:        {type: index, return_method: simple}
 
 portfolio:
@@ -94,6 +100,26 @@ web:
   interactive_model_toggle: true
   export_csv: true
   export_png: true
+
+shocks:
+  enabled: false
+  source: csv
+  csv_path: data/shock_data/romer_romer_shocks.csv
+  shock_column: rr_shock
+  cumulate: false
+  shock_window_months: 3
+
+irf:
+  enabled: false
+  max_horizon: 24
+  n_lags: 4
+  confidence_level: 0.90
+  output_dir: output/irf
+
+shock_conditioned:
+  enabled: false
+  scale_factor: 1.0
+  response_horizon: 12
 
 logging:
   level: INFO

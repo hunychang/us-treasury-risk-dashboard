@@ -31,13 +31,15 @@ class DataConfig(BaseModel):
 
 
 class PortfolioConfig(BaseModel):
-    objective: str = "minimum_variance"
+    objective: str = "minimum_variance"  # minimum_variance | cvar
     long_only: bool = True
     weight_sum: float = 1.0
     leverage: bool = False
     max_weight: float = 0.40
     rebalance_frequency: str = "monthly"  # daily | weekly | monthly
     transaction_cost_bps: float = 0.0
+    cvar_confidence: float = 0.95
+    cvar_n_scenarios: int = 5000
 
 
 class RollingCovConfig(BaseModel):
@@ -63,10 +65,34 @@ class VARConfig(BaseModel):
     annualization_factor: int = 252
 
 
+class ShockConditionedConfig(BaseModel):
+    enabled: bool = False
+    scale_factor: float = 1.0
+    response_horizon: int = 12
+
+
 class ModelsConfig(BaseModel):
     rolling_cov: RollingCovConfig = RollingCovConfig()
     ewma: EWMAConfig = EWMAConfig()
     var: VARConfig = VARConfig()
+    shock_conditioned: ShockConditionedConfig = ShockConditionedConfig()
+
+
+class ShockConfig(BaseModel):
+    enabled: bool = False
+    source: str = "csv"  # csv | database
+    csv_path: str = "data/shock_data/romer_romer_shocks.csv"
+    shock_column: str = "rr_shock"
+    cumulate: bool = False
+    shock_window_months: int = 3
+
+
+class IRFConfig(BaseModel):
+    enabled: bool = False
+    max_horizon: int = 24
+    n_lags: int = 4
+    confidence_level: float = 0.90
+    output_dir: str = "output/irf"
 
 
 class RiskMetricsConfig(BaseModel):
@@ -118,6 +144,8 @@ class ProjectConfig(BaseModel):
     data: DataConfig = DataConfig()
     portfolio: PortfolioConfig = PortfolioConfig()
     models: ModelsConfig = ModelsConfig()
+    shocks: ShockConfig = ShockConfig()
+    irf: IRFConfig = IRFConfig()
     risk_metrics: RiskMetricsConfig = RiskMetricsConfig()
     evaluation: EvaluationConfig = EvaluationConfig()
     web: WebConfig = WebConfig()
@@ -159,6 +187,8 @@ def load_config(path: Optional[str | Path] = None) -> ProjectConfig:
     portfolio_raw.update(constraints)
 
     models_raw = raw.get("models", {})
+    shocks_raw = raw.get("shocks", {})
+    irf_raw = raw.get("irf", {})
     risk_metrics_raw = raw.get("risk_metrics", {})
     evaluation_raw = raw.get("evaluation", {})
     web_raw = raw.get("web", {})
@@ -175,7 +205,12 @@ def load_config(path: Optional[str | Path] = None) -> ProjectConfig:
             rolling_cov=RollingCovConfig(**models_raw.get("rolling_cov", {})),
             ewma=EWMAConfig(**models_raw.get("ewma", {})),
             var=VARConfig(**models_raw.get("var", {})),
+            shock_conditioned=ShockConditionedConfig(
+                **models_raw.get("shock_conditioned", {})
+            ),
         ),
+        shocks=ShockConfig(**shocks_raw),
+        irf=IRFConfig(**irf_raw),
         risk_metrics=RiskMetricsConfig(**risk_metrics_raw),
         evaluation=EvaluationConfig(**evaluation_raw),
         web=WebConfig(**web_raw),

@@ -17,11 +17,14 @@ _DEFAULT_METADATA: Dict[str, dict] = {
     "DGS2":         {"type": "treasury_yield", "duration": 1.9},
     "DGS5":         {"type": "treasury_yield", "duration": 4.5},
     "DGS10":        {"type": "treasury_yield", "duration": 8.5},
+    "DGS30":        {"type": "treasury_yield", "duration": 19.5},
     "T10Y2Y":       {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
+    "T10Y3M":       {"type": "spread", "spread_duration": 8.0, "scale": 0.01},
     "BAMLC0A0CM":   {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
     "BAMLH0A0HYM2": {"type": "spread", "spread_duration": 4.0, "scale": 0.01},
     "BAA10Y":       {"type": "spread", "spread_duration": 7.0, "scale": 0.01},
     "T5YIE":        {"type": "spread", "spread_duration": 5.0, "scale": 0.01},
+    "T10YIE":       {"type": "spread", "spread_duration": 8.5, "scale": 0.01},
     "VIXCLS":       {"type": "index", "return_method": "simple"},
 }
 
